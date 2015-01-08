@@ -11,6 +11,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import node.Node;
+
 public class TCPListener implements Closeable, Runnable {
 
 	private boolean stopped;
@@ -22,6 +24,9 @@ public class TCPListener implements Closeable, Runnable {
 	private String componentName = null;
 	private ThreadLocal<DateFormat> df = null;
 
+	private int minRes = 0;
+	private Node node;
+	
 	public TCPListener(int port, String componentName, String dir) {
 
 		this.stopped = false;
@@ -49,7 +54,7 @@ public class TCPListener implements Closeable, Runnable {
 
 				socket = serverSocket.accept();
 				executor.execute(new CommandExecutor(socket.getInputStream(),
-						socket.getOutputStream(), componentName, df, dir));
+						socket.getOutputStream(), componentName, df, dir, minRes, node));
 			}
 
 		} catch (SocketException e) {
@@ -93,5 +98,14 @@ public class TCPListener implements Closeable, Runnable {
 			} catch (IOException e) {
 
 			}
+	}
+	
+	//stage 1 function
+	public void setMinRes(int mRes) {
+		this.minRes = mRes;
+	}
+	
+	public void setNode(Node node) {
+		this.node = node;
 	}
 }

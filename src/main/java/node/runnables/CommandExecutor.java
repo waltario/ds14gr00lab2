@@ -15,6 +15,8 @@ import java.nio.file.StandardOpenOption;
 import java.text.DateFormat;
 import java.util.Date;
 
+import node.Node;
+
 public class CommandExecutor implements Runnable, Closeable {
 
 	private BufferedReader reader = null;
@@ -22,15 +24,20 @@ public class CommandExecutor implements Runnable, Closeable {
 	private String componentName = null;
 	private ThreadLocal<DateFormat> df = null;
 	private String dir = null;
+	
+	private int minRes;
+	private Node node;
 
 	CommandExecutor(InputStream is, OutputStream os, String componentName,
-			ThreadLocal<DateFormat> df, String dir) throws IOException {
+			ThreadLocal<DateFormat> df, String dir, int minRes, Node node) throws IOException {
 
 		this.reader = new BufferedReader(new InputStreamReader(is));
 		this.writer = new PrintStream(os);
 		this.componentName = componentName;
 		this.df = df;
 		this.dir = dir;
+		this.minRes = minRes;
+		this.node = node;
 	}
 
 	@Override
@@ -95,6 +102,25 @@ public class CommandExecutor implements Runnable, Closeable {
 
 				return "Computationrequest has wrong format!";
 			}
+		}
+		
+		// Receive !share request from Initiator, change newRes from Node in preparation for the change
+		else if("!share".equals(parts[0])) {
+			int newRes = Integer.parseInt(parts[1]); //System.out.println("!share!");
+			node.setNewRes(newRes);
+			if(newRes < minRes) {
+				//System.out.println("!share nok");
+				return "!nok";
+			} else {
+				//System.out.println("!share ok");
+				return "!ok";
+			}
+		}
+		
+		// Receive !commit request from Initiator, finalize the change from the last !share request
+		else if("!commit".equals(parts[0])) {
+			//System.out.println("commandexecutor !commit, nres " + node.getNewRes());
+			node.setRes(node.getNewRes());
 		}
 
 		return "Wrong computationrequest!";

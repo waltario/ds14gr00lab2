@@ -6,6 +6,9 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.UnknownHostException;
+import java.util.Collection;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -23,6 +26,8 @@ public class UDPListener implements Runnable, Closeable {
 	private DatagramSocket socket = null;
 	private ExecutorService executor = null;
 	private NodeChecker nodeChecker = null;
+	
+	private int mRes = 0;
 
 	public UDPListener(int port, int timeout, int checkPeriod) {
 
@@ -52,7 +57,7 @@ public class UDPListener implements Runnable, Closeable {
 				socket.receive(packet);
 
 				received = new String(packet.getData()).trim();
-				manageReceived(packet.getAddress(), received);
+				manageReceived(packet.getAddress(), packet.getPort(), received);
 			}
 
 		} catch (SocketException e) {
@@ -66,7 +71,7 @@ public class UDPListener implements Runnable, Closeable {
 		}
 	}
 
-	private void manageReceived(InetAddress addr, String received) {
+	private void manageReceived(InetAddress addr, int port, String received) {
 
 		String[] parts = received.split(" ");
 
@@ -94,6 +99,31 @@ public class UDPListener implements Runnable, Closeable {
 				return;
 			}
 		}
+		
+		// stage 1 receive !hello, send !init
+		else if ("!hello".equals(parts[0])) {
+			DatagramPacket packet = null;
+			byte[] buf = null;
+			
+			StatsCollector statsColle = StatsCollector.getInstance();
+			ConcurrentHashMap<Integer, NodeHelper> nodeMap = statsColle.getNodeMap();
+			StringBuilder sb = new StringBuilder();
+			Collection<NodeHelper> list = nodeMap.values();
+
+			for (NodeHelper o : list) {
+				if(o.isOnline()) {
+					sb.append(o.getAddress().getHostAddress() + ":" + o.getPort() + " ");
+				}
+			}
+			buf = ("!init " + sb.toString() + mRes).getBytes();
+			packet = new DatagramPacket(buf, buf.length, addr, port);
+
+			try {
+				socket.send(packet);
+			} catch (IOException e) {
+				System.out.println("send packet fail 1");
+			}
+		}
 	}
 
 	@Override
@@ -117,5 +147,10 @@ public class UDPListener implements Runnable, Closeable {
 
 		if (socket != null)
 			socket.close();
+	}
+	
+	//stage 1 helper method
+	public void setRes(int res) {
+		this.mRes = res;
 	}
 }
