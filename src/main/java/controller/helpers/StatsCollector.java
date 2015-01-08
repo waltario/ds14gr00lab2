@@ -1,10 +1,13 @@
 package controller.helpers;
 
+import java.security.Key;
 import java.security.PrivateKey;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+
+import javax.crypto.SecretKey;
 
 public class StatsCollector {
 
@@ -15,7 +18,8 @@ public class StatsCollector {
 	
 	private PrivateKey privateKeyController = null;
 	private String publicKeyPathClient = null;
-
+	private Key hMAC = null;
+	
 	private StatsCollector() {
 
 		this.nodeMap = new ConcurrentHashMap<Integer, NodeHelper>();
@@ -232,6 +236,14 @@ public class StatsCollector {
 
 	public void setPublicKeyPathClient(String publicKeyPathClient) {
 		this.publicKeyPathClient = publicKeyPathClient;
+	}
+
+	public Key gethMAC() {
+		return hMAC;
+	}
+
+	public void sethMAC(Key key) {
+		this.hMAC = key;
 	}
 	
 }

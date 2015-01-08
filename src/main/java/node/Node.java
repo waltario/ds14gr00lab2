@@ -1,15 +1,22 @@
 package node;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import javax.crypto.Mac;
+
 import node.runnables.PacketSender;
 import node.runnables.TCPListener;
 import util.Config;
+import util.Keys;
 import cli.Command;
 import cli.Shell;
 
@@ -29,7 +36,9 @@ public class Node implements INodeCli, Runnable {
 	private Shell shell = null;
 	private PacketSender packetSender = null;
 	private TCPListener tcpListener = null;
-
+	private Key keyHMAC = null;
+	private Mac hMac = null;
+	
 	/**
 	 * @param componentName
 	 *            the name of the component - represented in the prompt
@@ -60,6 +69,14 @@ public class Node implements INodeCli, Runnable {
 		udpPort = config.getInt("controller.udp.port");
 		tcpPort = config.getInt("tcp.port");
 		alivePeriod = config.getInt("node.alive");
+		try {
+			keyHMAC = Keys.readSecretKey(new File(config.getString("hmac.key")));
+			hMac = Mac.getInstance("HmacSHA256");
+			hMac.init(keyHMAC);
+		} catch (IOException | NoSuchAlgorithmException | InvalidKeyException e) {
+			e.printStackTrace();
+		}
+				
 	}
 
 	private void initRunnables() {
@@ -68,7 +85,7 @@ public class Node implements INodeCli, Runnable {
 		shell.register(this);
 		packetSender = new PacketSender(host, udpPort, tcpPort, alivePeriod,
 				operators);
-		tcpListener = new TCPListener(tcpPort, componentName, dir);
+		tcpListener = new TCPListener(tcpPort, componentName, dir,hMac);
 	}
 
 	@Override

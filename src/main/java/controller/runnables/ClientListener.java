@@ -11,6 +11,7 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -21,6 +22,7 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
+import javax.crypto.Mac;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
@@ -51,6 +53,7 @@ public class ClientListener implements Runnable, Closeable {
 	private SecretKey secretKeyAES = null;
 	private Cipher cipherAESencode = null;
 	private Cipher cipherAESdecode = null;
+	private Mac hMac = null;
 	
 	public ClientListener(Socket socket) throws IOException {
 
@@ -58,6 +61,14 @@ public class ClientListener implements Runnable, Closeable {
 		this.socket = socket;
 		this.stopped = false;
 		collector = StatsCollector.getInstance();
+		try {
+			hMac = Mac.getInstance("HmacSHA256");
+			hMac.init(collector.gethMAC());
+			
+		} catch (NoSuchAlgorithmException | InvalidKeyException e) {
+			e.printStackTrace();
+		}
+		
 
 		initIO();
 	}
@@ -599,8 +610,69 @@ public class ClientListener implements Runnable, Closeable {
 				socket.getInputStream()));
 		PrintStream writer = new PrintStream(socket.getOutputStream(), true);
 
-		writer.println("!compute " + first + " " + op + " " + second);
+		String message = "!compute " + first + " " + op + " " + second;
+		//writer.println("!compute " + first + " " + op + " " + second);
+		
+		//create HMAC Hash
+		hMac.update(message.getBytes());
+		byte[] hash = Base64.encode(hMac.doFinal());
+		
+		//add hMac ( base64) to original message -> <HMAC> !compute 5 + 5 
+		String messageHMAC = hash + " " + message; 
+		log.info("message mit HMAC : " + messageHMAC);
+		
+		
+		//INFO Stage 3 -> change in case not using hmac
+		//writer.println(message);
+		writer.println(messageHMAC);
+		log.info("after sending HMAC");
+		
+		log.info("before reading answer HMAC");
 		result = reader.readLine();
+
+		log.info("RESULT: " + result);
+		//TODO check HMAC  and extract message
+		//1. send back <HMAC>1  !tampered2 !compute3 1($) +(5)  3(6)
+		String[] parts = result.split(" ");
+		if(parts[1].equals("!tampered")){
+			log.info("we have a tempered message");
+			System.out.println("Message is tempered");
+			return "Message is tempered";
+		}
+		else{
+			
+			
+			String message1=null;
+			message1 = parts[1] + " ";
+			for(int i = 2; i<=parts.length;i++){
+				message1 = message1 + "  " + parts[i]; 
+			}
+			log.info("message zusammen gesetzt: "+ message1);
+			
+			// computedHash is the HMAC of the received plaintext
+			// receivedHash is the HMAC that was sent by the communication partner
+			hMac.update(message1.getBytes());
+			byte[] computedHash1 = hMac.doFinal();
+			
+			byte[] receivedHash1 = Base64.decode(parts[0].getBytes());
+			boolean validHash1 = MessageDigest.isEqual(computedHash1, receivedHash1);
+			
+			if(validHash1){
+				log.info("valid hash " + parts[1]);
+				try{
+					int i = Integer.parseInt(parts[1]);
+					result =  parts[1];
+					
+				}
+				catch(NumberFormatException e ){
+					return message1;
+				}
+			}
+			else{
+				return "Message is tempered";
+			}
+				
+		}
 
 		if (writer != null)
 			writer.close();

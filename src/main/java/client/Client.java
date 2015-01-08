@@ -63,6 +63,7 @@ public class Client implements IClientCli, Runnable {
 	private Cipher cipherAESencode = null;
 	private Cipher cipherAESdecode = null;
 	
+	
 	/**
 	 * @param componentName
 	 *            the name of the component - represented in the prompt

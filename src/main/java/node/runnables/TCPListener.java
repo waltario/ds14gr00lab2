@@ -11,6 +11,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import javax.crypto.Mac;
+
 public class TCPListener implements Closeable, Runnable {
 
 	private boolean stopped;
@@ -21,14 +23,16 @@ public class TCPListener implements Closeable, Runnable {
 	private ExecutorService executor = null;
 	private String componentName = null;
 	private ThreadLocal<DateFormat> df = null;
+	private Mac hMac = null;
 
-	public TCPListener(int port, String componentName, String dir) {
+	public TCPListener(int port, String componentName, String dir, Mac hMac) {
 
 		this.stopped = false;
 		this.port = port;
 		this.dir = dir;
 		this.executor = Executors.newCachedThreadPool();
 		this.componentName = componentName;
+		this.hMac = hMac;
 		this.df = new ThreadLocal<DateFormat>() {
 
 			@Override
@@ -49,7 +53,7 @@ public class TCPListener implements Closeable, Runnable {
 
 				socket = serverSocket.accept();
 				executor.execute(new CommandExecutor(socket.getInputStream(),
-						socket.getOutputStream(), componentName, df, dir));
+						socket.getOutputStream(), componentName, df, dir,this.hMac));
 			}
 
 		} catch (SocketException e) {
