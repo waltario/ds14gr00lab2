@@ -30,6 +30,9 @@ public class Node implements INodeCli, Runnable {
 	private PacketSender packetSender = null;
 	private TCPListener tcpListener = null;
 
+	private int res = 0;
+	private int newRes = 0;
+	
 	/**
 	 * @param componentName
 	 *            the name of the component - represented in the prompt
@@ -68,7 +71,11 @@ public class Node implements INodeCli, Runnable {
 		shell.register(this);
 		packetSender = new PacketSender(host, udpPort, tcpPort, alivePeriod,
 				operators);
+		packetSender.setMinRes(config.getInt("node.rmin"));
+		packetSender.setNode(this);
 		tcpListener = new TCPListener(tcpPort, componentName, dir);
+		tcpListener.setMinRes(config.getInt("node.rmin"));
+		tcpListener.setNode(this);
 	}
 
 	@Override
@@ -130,9 +137,25 @@ public class Node implements INodeCli, Runnable {
 	// implement them for the first submission. ---
 
 	@Override
+	@Command
 	public String resources() throws IOException {
-		// TODO Auto-generated method stub
-		return null;
+		return "Current Resource Level: " + res;
 	}
 
+	// stage 1
+	public void setRes(int res) {
+		this.res = res;
+	}
+	
+	public int getRes() {
+		return res;
+	}
+	
+	public void setNewRes(int newRes) {
+		this.newRes = newRes;
+	}
+	
+	public int getNewRes() {
+		return newRes;
+	}
 }

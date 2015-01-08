@@ -142,5 +142,7 @@ public interface IClientCli {
 	 *             if an I/O error occurs
 	 */
 	String authenticate(String username) throws IOException;
+	
+	String  auth(String username) throws IOException;
 
 }
