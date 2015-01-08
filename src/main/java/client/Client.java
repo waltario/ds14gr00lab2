@@ -334,7 +334,7 @@ public class Client implements IClientCli, Runnable {
 	// --- Commands needed for Lab 2. Please note that you do not have to
 	// implement them for the first submission. ---
 
-	@Override
+
 	@Command
 	public String auth(String username) throws IOException {
 		
