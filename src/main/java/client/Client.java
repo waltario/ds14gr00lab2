@@ -146,7 +146,7 @@ public class Client implements IClientCli, Runnable {
 		} catch (UnsupportedEncodingException e) {	
 				e.printStackTrace();
 		}
-			
+		//teest	
 			
 		return retString;
 			
