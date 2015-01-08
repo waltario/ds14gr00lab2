@@ -1,8 +1,10 @@
 package controller;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.security.PrivateKey;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -12,6 +14,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import util.Config;
+import util.Keys;
+import util.SecurityUtils;
 import cli.Command;
 import cli.Shell;
 import controller.helpers.StatsCollector;
@@ -30,7 +34,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	private Shell shell = null;
 	private TCPListener accepter = null;
 	private UDPListener receiver = null;
-
+	
 	/**
 	 * @param componentNamenThreads
 	 *            the name of the component - represented in the prompt
@@ -50,9 +54,20 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		this.userResponseStream = userResponseStream;
 		this.executor = Executors.newFixedThreadPool(3);
 		this.collector = StatsCollector.getInstance();
+		
+		SecurityUtils.registerBouncyCastle();
 
 		initConfig();
 		initRunnables();
+		
+		//get private key for controller and set
+		try {
+			collector.setPrivateKey(Keys.readPrivatePEM(new File(config.getString("key"))));
+			collector.setPublicKeyPathClient(config.getString("keys.dir"));
+			
+		} catch (IOException e) {
+			
+		}
 	}
 
 	@Override

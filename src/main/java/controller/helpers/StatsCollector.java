@@ -1,5 +1,6 @@
 package controller.helpers;
 
+import java.security.PrivateKey;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -11,6 +12,9 @@ public class StatsCollector {
 	private ConcurrentHashMap<Integer, NodeHelper> nodeMap = null;
 	private ConcurrentHashMap<Character, List<Integer>> operatorMap = null;
 	private ConcurrentHashMap<String, User> userMap = null;
+	
+	private PrivateKey privateKeyController = null;
+	private String publicKeyPathClient = null;
 
 	private StatsCollector() {
 
@@ -85,7 +89,8 @@ public class StatsCollector {
 	}
 
 	public String listOperators() {
-
+		System.out.println("enter list operator");
+		
 		String ret = "";
 
 		for (Character c : operatorMap.keySet()) {
@@ -174,6 +179,19 @@ public class StatsCollector {
 		return false;
 	}
 
+	public boolean setOnline(String uname) {
+
+		if (userMap.containsKey(uname)) {
+
+			User user = userMap.get(uname);
+			user.setOnline(true);
+			return true;
+			
+		}
+
+		return false;
+	}
+	
 	public void logout(String uname) {
 
 		userMap.get(uname).setOnline(false);
@@ -196,4 +214,25 @@ public class StatsCollector {
 
 		return false;
 	}
+	
+	// ///////////////////////////////////////////////////
+	// ///////////////////// CONTROLLER KEYS ////////////////////////
+	// ///////////////////////////////////////////////////
+
+	public void setPrivateKey(PrivateKey pk){
+		this.privateKeyController = pk;
+	}
+	
+	public PrivateKey getPrivateKey(){
+		return privateKeyController;
+	}
+
+	public String getPublicKeyPathClient() {
+		return publicKeyPathClient;
+	}
+
+	public void setPublicKeyPathClient(String publicKeyPathClient) {
+		this.publicKeyPathClient = publicKeyPathClient;
+	}
+	
 }
