@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.security.InvalidKeyException;
+import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.DateFormat;
@@ -76,8 +77,10 @@ public class CommandExecutor implements Runnable, Closeable {
 		try {
 			hMac = Mac.getInstance("HmacSHA256");
 			//hMac.init(collector.gethMAC());
-			hMac.init(Keys.readSecretKey(new File(this.controllerConf.getString("hmac.key"))));
-			//System.out.println("########################### KEY 1 " + hMac.toString() + "  " + hMac.getEncoded() );
+			Key noteKey = Keys.readSecretKey(new File(this.controllerConf.getString("hmac.key")));
+			hMac.init(noteKey);
+			
+			System.out.println("## KEY 1 NODE" + noteKey.toString() + "  " + noteKey.getEncoded()  );
 		
 		} catch (NoSuchAlgorithmException |   IOException | InvalidKeyException e1) {
 			// TODO Auto-generated catch block
