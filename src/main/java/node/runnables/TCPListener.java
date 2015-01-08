@@ -1,7 +1,9 @@
 package node.runnables;
 
+import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
@@ -26,7 +28,7 @@ public class TCPListener implements Closeable, Runnable {
 
 	private int minRes = 0;
 	private Node node;
-	
+
 	public TCPListener(int port, String componentName, String dir) {
 
 		this.stopped = false;
@@ -53,8 +55,25 @@ public class TCPListener implements Closeable, Runnable {
 			while (!stopped) {
 
 				socket = serverSocket.accept();
-				executor.execute(new CommandExecutor(socket.getInputStream(),
-						socket.getOutputStream(), componentName, df, dir, minRes, node));
+
+				BufferedReader reader = new BufferedReader(
+						new InputStreamReader(socket.getInputStream()));
+				String line = reader.readLine();
+
+				if (line != null) {
+
+					String[] parts = line.split(" ");
+
+					if ("!compute".equals(parts[0]))
+						executor.execute(new CommandExecutor(line, socket
+								.getOutputStream(), componentName, df, dir,
+								minRes, node));
+
+					if ("!logs".equals(parts[0]))
+						executor.execute(new LogExecutor(socket
+								.getOutputStream(), componentName, dir));
+
+				}
 			}
 
 		} catch (SocketException e) {
@@ -99,12 +118,12 @@ public class TCPListener implements Closeable, Runnable {
 
 			}
 	}
-	
-	//stage 1 function
+
+	// stage 1 function
 	public void setMinRes(int mRes) {
 		this.minRes = mRes;
 	}
-	
+
 	public void setNode(Node node) {
 		this.node = node;
 	}
