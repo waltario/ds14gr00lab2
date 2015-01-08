@@ -136,6 +136,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		receiver = new UDPListener(config.getInt("udp.port"),
 				config.getInt("node.timeout"),
 				config.getInt("node.checkPeriod"));
+		receiver.setRes(config.getInt("controller.rmax"));
 	}
 
 	private String formOutput(ConcurrentHashMap<?, ?> map) {

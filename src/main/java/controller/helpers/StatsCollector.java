@@ -7,6 +7,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class StatsCollector {
 
+	// resources
+	private int maxRes;
+	
 	private static StatsCollector instance = null;
 	private ConcurrentHashMap<Integer, NodeHelper> nodeMap = null;
 	private ConcurrentHashMap<Character, List<Integer>> operatorMap = null;
