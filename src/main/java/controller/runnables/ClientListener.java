@@ -615,4 +615,112 @@ public class ClientListener implements Runnable, Closeable {
 
 		return result;
 	}
+	
+	/*
+	private String compute1(int first, int second, char op) throws IOException {
+
+		String result = null;
+
+		NodeHelper node = collector.getLowestNodeFor(op);
+
+		if (node == null)
+			return "Not supported operation!";
+
+		Socket socket = new Socket(node.getAddress(), node.getPort());
+		BufferedReader reader = new BufferedReader(new InputStreamReader(
+				socket.getInputStream()));
+		PrintStream writer = new PrintStream(socket.getOutputStream(), true);
+
+		String message = "!compute " + first + " " + op + " " + second;
+		//writer.println("!compute " + first + " " + op + " " + second);
+		
+		/*
+		byte[] testen1 = "test".getBytes();
+		//test 
+		hMac.update(testen1);
+		byte[] hashTest = Base64.encode(hMac.doFinal());
+		log.info("TEST: " + hashTest +  "  " + hMac.doFinal() );
+		
+		
+		//create HMAC Hash
+		hMac.update(message.getBytes());
+		byte[] hash = Base64.encode(hMac.doFinal());
+		
+		//add hMac ( base64) to original message -> <HMAC> !compute 5 + 5 
+		String messageHMAC = hash + " " + message; 
+		log.info("message mit HMAC : " + messageHMAC);
+		
+		
+		//INFO Stage 3 -> change in case not using hmac
+		//writer.println(message);
+		writer.println(messageHMAC);
+		//log.info("after sending HMAC");
+		
+		//log.info("before reading answer HMAC");
+		result = reader.readLine();
+
+		//log.info("RESULT: " + result);
+		//TODO check HMAC  and extract message
+		//1. send back <HMAC>1  !tampered2 !compute3 1($) +(5)  3(6)
+		String[] parts = result.split(" ");
+		if(parts[1].equals("!tampered")){
+			//log.info("we have a tempered message");
+			System.out.println("Message is tempered");
+			
+			return "Message is tempered";
+			
+		}
+		else{
+			
+			
+			String message1=null;
+			message1 = parts[1] + " ";
+			for(int i = 2; i<=parts.length;i++){
+				message1 = message1 + "  " + parts[i]; 
+			}
+			//log.info("message zusammen gesetzt: "+ message1);
+			
+			// computedHash is the HMAC of the received plaintext
+			// receivedHash is the HMAC that was sent by the communication partner
+			hMac.update(message1.getBytes());
+			byte[] computedHash1 = hMac.doFinal();
+			
+			byte[] receivedHash1 = Base64.decode(parts[0].getBytes());
+			boolean validHash1 = MessageDigest.isEqual(computedHash1, receivedHash1);
+			
+			if(validHash1){
+				//log.info("valid hash " + parts[1]);
+				try{
+					int i = Integer.parseInt(parts[1]);
+					result =  parts[1];
+					
+				}
+				catch(NumberFormatException e ){
+					return message1;
+				}
+			}
+			else{
+				return "Message is tempered";
+			}
+				
+		}
+
+		if (writer != null)
+			writer.close();
+
+		if (reader != null)
+			reader.close();
+
+		if (socket != null)
+			socket.close();
+
+		collector.arrangeCredits(node.getPort(), uname, result);
+
+		return result;
+	}	 
+	 
+	  
+	 */
+	
+	
 }
