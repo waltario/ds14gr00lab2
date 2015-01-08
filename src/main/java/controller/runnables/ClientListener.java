@@ -32,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.bouncycastle.util.encoders.Base64;
 
 import client.Client;
+import util.Config;
 import util.Keys;
 import controller.helpers.NodeHelper;
 import controller.helpers.StatsCollector;
@@ -54,6 +55,7 @@ public class ClientListener implements Runnable, Closeable {
 	private Cipher cipherAESencode = null;
 	private Cipher cipherAESdecode = null;
 	private Mac hMac = null;
+	private Config confController = null;
 	
 	public ClientListener(Socket socket) throws IOException {
 
@@ -63,7 +65,13 @@ public class ClientListener implements Runnable, Closeable {
 		collector = StatsCollector.getInstance();
 		try {
 			hMac = Mac.getInstance("HmacSHA256");
-			hMac.init(collector.gethMAC());
+			
+			//hMac.init(collector.gethMAC());
+			
+			confController = collector.getControllerConf();
+			hMac.init(Keys.readSecretKey(new File(confController.getString("hmac.key"))));
+			//log.info("########################### KEY 1 " + collector.gethMAC().toString() + "  " + collector.gethMAC().getEncoded() );
+			
 			
 		} catch (NoSuchAlgorithmException | InvalidKeyException e) {
 			e.printStackTrace();
@@ -612,6 +620,12 @@ public class ClientListener implements Runnable, Closeable {
 
 		String message = "!compute " + first + " " + op + " " + second;
 		//writer.println("!compute " + first + " " + op + " " + second);
+		
+		byte[] testen1 = "test".getBytes();
+		//test 
+		hMac.update(testen1);
+		byte[] hashTest = Base64.encode(hMac.doFinal());
+		log.info("TEST: " + hashTest +  "  " + hMac.doFinal() );
 		
 		//create HMAC Hash
 		hMac.update(message.getBytes());

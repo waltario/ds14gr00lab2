@@ -38,7 +38,7 @@ public class Node implements INodeCli, Runnable {
 	private TCPListener tcpListener = null;
 	private Key keyHMAC = null;
 	private Mac hMac = null;
-	
+	private Config controllerConf =null;
 	/**
 	 * @param componentName
 	 *            the name of the component - represented in the prompt
@@ -63,6 +63,9 @@ public class Node implements INodeCli, Runnable {
 
 	private void initConfig() {
 
+		
+		controllerConf = new Config("controller");
+		
 		dir = config.getString("log.dir");
 		operators = config.getString("node.operators");
 		host = config.getString("controller.host");
@@ -70,9 +73,12 @@ public class Node implements INodeCli, Runnable {
 		tcpPort = config.getInt("tcp.port");
 		alivePeriod = config.getInt("node.alive");
 		try {
-			keyHMAC = Keys.readSecretKey(new File(config.getString("hmac.key")));
+			keyHMAC = Keys.readSecretKey(new File(controllerConf.getString("hmac.key")));
 			hMac = Mac.getInstance("HmacSHA256");
 			hMac.init(keyHMAC);
+		
+			System.out.println("########################### KEY 1 " + keyHMAC.toString() + "  " + keyHMAC.getEncoded());
+			
 		} catch (IOException | NoSuchAlgorithmException | InvalidKeyException e) {
 			e.printStackTrace();
 		}
@@ -85,7 +91,7 @@ public class Node implements INodeCli, Runnable {
 		shell.register(this);
 		packetSender = new PacketSender(host, udpPort, tcpPort, alivePeriod,
 				operators);
-		tcpListener = new TCPListener(tcpPort, componentName, dir,hMac);
+		tcpListener = new TCPListener(tcpPort, componentName, dir,hMac,controllerConf);
 	}
 
 	@Override

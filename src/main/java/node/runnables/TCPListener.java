@@ -13,6 +13,8 @@ import java.util.concurrent.TimeUnit;
 
 import javax.crypto.Mac;
 
+import util.Config;
+
 public class TCPListener implements Closeable, Runnable {
 
 	private boolean stopped;
@@ -24,8 +26,9 @@ public class TCPListener implements Closeable, Runnable {
 	private String componentName = null;
 	private ThreadLocal<DateFormat> df = null;
 	private Mac hMac = null;
+	private Config controllerConf =null;
 
-	public TCPListener(int port, String componentName, String dir, Mac hMac) {
+	public TCPListener(int port, String componentName, String dir, Mac hMac, Config controllerConf) {
 
 		this.stopped = false;
 		this.port = port;
@@ -33,6 +36,7 @@ public class TCPListener implements Closeable, Runnable {
 		this.executor = Executors.newCachedThreadPool();
 		this.componentName = componentName;
 		this.hMac = hMac;
+		this.controllerConf = controllerConf;
 		this.df = new ThreadLocal<DateFormat>() {
 
 			@Override
@@ -53,7 +57,7 @@ public class TCPListener implements Closeable, Runnable {
 
 				socket = serverSocket.accept();
 				executor.execute(new CommandExecutor(socket.getInputStream(),
-						socket.getOutputStream(), componentName, df, dir,this.hMac));
+						socket.getOutputStream(), componentName, df, dir,this.hMac,this.controllerConf));
 			}
 
 		} catch (SocketException e) {

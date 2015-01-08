@@ -12,13 +12,18 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.security.InvalidKeyException;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.text.DateFormat;
 import java.util.Date;
 
 import javax.crypto.Mac;
 
 import org.bouncycastle.util.encoders.Base64;
+
+import util.Config;
+import util.Keys;
 
 public class CommandExecutor implements Runnable, Closeable {
 
@@ -27,17 +32,22 @@ public class CommandExecutor implements Runnable, Closeable {
 	private String componentName = null;
 	private ThreadLocal<DateFormat> df = null;
 	private String dir = null;
+	private Mac hMac1 = null;
 	private Mac hMac = null;
+	private Config controllerConf =null;
 
 	CommandExecutor(InputStream is, OutputStream os, String componentName,
-			ThreadLocal<DateFormat> df, String dir, Mac hMac) throws IOException {
+			ThreadLocal<DateFormat> df, String dir, Mac hMac, Config controllerConf) throws IOException {
 
 		this.reader = new BufferedReader(new InputStreamReader(is));
 		this.writer = new PrintStream(os);
 		this.componentName = componentName;
 		this.df = df;
 		this.dir = dir;
-		this.hMac = hMac;
+		this.hMac1 = hMac;
+		this.controllerConf = controllerConf;
+		
+		
 	}
 
 	@Override
@@ -63,17 +73,36 @@ public class CommandExecutor implements Runnable, Closeable {
 
 		System.out.println("received String !compute = " + expression);
 		
+		try {
+			hMac = Mac.getInstance("HmacSHA256");
+			//hMac.init(collector.gethMAC());
+			hMac.init(Keys.readSecretKey(new File(this.controllerConf.getString("hmac.key"))));
+			//System.out.println("########################### KEY 1 " + hMac.toString() + "  " + hMac.getEncoded() );
+		
+		} catch (NoSuchAlgorithmException |   IOException | InvalidKeyException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+	
+		
+		//test 
+		byte[] testen1 = "test".getBytes();
+		//test 
+		hMac.update(testen1);
+		byte[] hashTest = Base64.encode(hMac.doFinal());
+		System.out.println("TEST: " + hashTest +  "  " + hMac.doFinal() );
 		
 		String[] parts = expression.split(" ");
 		//create HMAC Hash
 		//get command again !compute 1 + 2 
 		String message = parts[1] + " " + parts[2] + " " + parts[3] + " " + parts[4];
-
+		System.out.println("Message put together: " + message);
 		// computedHash is the HMAC of the received plaintext
 		hMac.update(message.getBytes());
 		byte[] computedHash  = hMac.doFinal();
 		// receivedHash is the HMAC that was sent by the communication partner
 		byte[] receivedHash = Base64.decode(parts[0].getBytes());
+		System.out.println("hash received " + receivedHash + "   computed hash " + computedHash);
 		boolean validHash = MessageDigest.isEqual(computedHash, receivedHash);
 		
 		System.out.println("hash boolean " + validHash);

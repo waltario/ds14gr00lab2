@@ -62,9 +62,11 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		
 		//get private key for controller and set
 		try {
+			Config controllerConf = new Config("controller");
 			collector.setPrivateKey(Keys.readPrivatePEM(new File(config.getString("key"))));
-			collector.sethMAC(Keys.readSecretKey(new File(config.getString("hmac.key"))));
+			collector.sethMAC(Keys.readSecretKey(new File(controllerConf.getString("hmac.key"))));
 			collector.setPublicKeyPathClient(config.getString("keys.dir"));
+			collector.setControllerConf(controllerConf);
 			
 		} catch (IOException e) {
 			

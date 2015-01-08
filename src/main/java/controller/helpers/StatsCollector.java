@@ -9,6 +9,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.crypto.SecretKey;
 
+import util.Config;
+
 public class StatsCollector {
 
 	private static StatsCollector instance = null;
@@ -19,6 +21,7 @@ public class StatsCollector {
 	private PrivateKey privateKeyController = null;
 	private String publicKeyPathClient = null;
 	private Key hMAC = null;
+	private Config controllerConf = null;
 	
 	private StatsCollector() {
 
@@ -244,6 +247,14 @@ public class StatsCollector {
 
 	public void sethMAC(Key key) {
 		this.hMAC = key;
+	}
+
+	public Config getControllerConf() {
+		return controllerConf;
+	}
+
+	public void setControllerConf(Config controllerConf) {
+		this.controllerConf = controllerConf;
 	}
 	
 }
