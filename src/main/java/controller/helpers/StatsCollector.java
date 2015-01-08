@@ -89,8 +89,7 @@ public class StatsCollector {
 	}
 
 	public String listOperators() {
-		System.out.println("enter list operator");
-		
+				
 		String ret = "";
 
 		for (Character c : operatorMap.keySet()) {

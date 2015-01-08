@@ -128,70 +128,52 @@ public class Client implements IClientCli, Runnable {
 	}
 	
 	private String encodeAES(String command){
-		log.info("start encoding with AES");
 
 		 byte[] retMessageEncyrypted = null;
 		 try {
 			 
-			 log.info("doFinal - encrypt String: " + command);
 			 retMessageEncyrypted = cipherAESencode.doFinal(command.getBytes());
-			 log.info( "after encoding aes doFinal" + retMessageEncyrypted);	
-				
-			} catch (IllegalBlockSizeException | BadPaddingException e) {
-				// TODO Auto-generated catch block
+					
+		} catch (IllegalBlockSizeException | BadPaddingException e) {	
 				e.printStackTrace();
-			}
+		}
 				
-			 log.info("base encode encoded message");	
-			 byte[] final3rdMessageEncryptedBase64 = Base64.encode(retMessageEncyrypted);
-			 log.info("base encoded" + final3rdMessageEncryptedBase64);
-				
-			log.info("create string");
-			String retString = null;
-			try {
+		byte[] final3rdMessageEncryptedBase64 = Base64.encode(retMessageEncyrypted);
+		String retString = null;
+		try {
 				retString = new String(final3rdMessageEncryptedBase64,"UTF-8");
-			} catch (UnsupportedEncodingException e) {	
+				
+		} catch (UnsupportedEncodingException e) {	
 				e.printStackTrace();
-			}
-			log.info("created string: " + retString);
+		}
 			
-			return retString;
+			
+		return retString;
 			
 	}
 	
 
-	
 	private String decodeAES(String command){
-		log.info("start deoding with AES");
-
+	
 		 byte[] retMessageEncyrypted = null;
 		 try {
-			 log.info("doFinal - encrypt String: " + command);
+			
 			 retMessageEncyrypted = cipherAESdecode.doFinal(Base64.decode(command.getBytes()));
-			  log.info( "after decoding aes doFinal " + retMessageEncyrypted);	
-				
-				
+					
 			} catch (IllegalBlockSizeException | BadPaddingException e) {
-				// TODO Auto-generated catch block
+				
 				e.printStackTrace();
 			}
-			
-				
-			// byte[] final3rdMessageEncryptedBase64 = Base64.encode(retMessageEncyrypted);
-				//log.info( "before send 3");
-				
 
-		    log.info("create string");
-			String retString = null;
-			try {
+	   
+		String retString = null;
+		
+		try {
 				retString = new String(retMessageEncyrypted,"UTF-8");
-			} catch (UnsupportedEncodingException e) {
-				
+		} catch (UnsupportedEncodingException e) {
 				e.printStackTrace();
-			}
-			log.info("created string: " + retString);
-			
-			return retString;
+		}
+		return retString;
 	}
 
 	@Override
@@ -201,33 +183,23 @@ public class Client implements IClientCli, Runnable {
 		if(!isAuthenticated())
 			return this.isNotAuthenticated;
 		
-		  String logout = "!logout";
+		  String sendCommand = "!logout";
 		
 		  /********************
 		   * Send Command !logout
 		   *******************/
 
-		  String test = this.encodeAES(logout);
-		  log.info("#################### Encoded" + test);
+		  String test = this.encodeAES(sendCommand);  
+		  writer.println(test);
 		  
-		
-		  
-		 String test2 =  this.decodeAES(test);
-		 log.info("Test sended String: Decoded" + test2);
-		  
-		 writer.println(test);
-		  
-
 		  /********************
 		   * Wait for Answer
 		   *******************/
 		 
-		 log.info("wait for reading Line");
-		String read = reader.readLine();
-		 log.info("## recveived String: ## " + read) ;
+		String read = reader.readLine();		
 		String ret = decodeAES(read);
 		 
-		log.info("returned value to print decoded: " +ret);
+		//clears all keys at client
 		this.aesSecretKEy = null;
 		this.aesSecretKEy = null;
 		ivParameter = null;
@@ -297,7 +269,7 @@ public class Client implements IClientCli, Runnable {
 		
 		//writer.println("!exit");
 		///String ret = reader.readLine();
-			
+		
 		close();
 	
 		this.aesSecretKEy = null;
@@ -364,7 +336,7 @@ public class Client implements IClientCli, Runnable {
 	@Command
 	public String auth(String username) throws IOException {
 		
-		//check if clientis already authenticated 
+		//if client is already authenticated return
 		if(isAuthenticated())
 			return this.alreadyAuthenticated;
 		
@@ -377,7 +349,7 @@ public class Client implements IClientCli, Runnable {
 		
 		File file = new File(config.getString("keys.dir")+"/"+username+".pem");
 		
-		//check if file exists - private user key
+		//check if file exists - private user key - only proceed if exists
 		if(file.exists()){
 			
 			privateKeyUser = Keys.readPrivatePEM(new File(config.getString("keys.dir")+"/"+username+".pem"));
@@ -418,13 +390,13 @@ public class Client implements IClientCli, Runnable {
 				
 				e.printStackTrace();
 			} catch (InvalidKeyException e) {
-				// TODO Auto-generated catch block
+				
 				e.printStackTrace();
 			} catch (IllegalBlockSizeException e) {
-				// TODO Auto-generated catch block
+				
 				e.printStackTrace();
 			} catch (BadPaddingException e) {
-				// TODO Auto-generated catch block
+				
 				e.printStackTrace();
 			}
 			
@@ -436,24 +408,23 @@ public class Client implements IClientCli, Runnable {
 			return "Error | No Key Available for User " + username;
 		}
 		
-		System.out.println("send message1");
+		
 		//send to Controller as a String 1st
 		writer.println(new String(finalByteMessageEncryptedBase64,"UTF-8"));
 		
-		
-		
+
 		//wait for answer controller 2nd
 		String  message2returned = reader.readLine();
 		
-		System.out.println("message 2 received");
+		//System.out.println("message 2 received");
 		
 		//2nd message received -> read parameters and send 3rd message back
 		byte[] message2returnedBytesBase64 = message2returned.getBytes();
-		System.out.println("returned message "+ message2returnedBytesBase64);
+		
 		//base64 -> encrypted message
 		byte[] byteReceivedInputEncrypted = Base64.decode(message2returnedBytesBase64);
 
-		System.out.println("returned message "+ byteReceivedInputEncrypted);
+		//System.out.println("returned message "+ byteReceivedInputEncrypted);
 		
 		// prepare cipher RSA
 		Cipher cipher2 = null;
@@ -463,108 +434,80 @@ public class Client implements IClientCli, Runnable {
 		 try {
 			cipher2 = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
 			cipher2.init(Cipher.DECRYPT_MODE, privateKeyUser);
-			System.out.println("try to decode");
 			finalByteMessageDecrypted = cipher2.doFinal(byteReceivedInputEncrypted);
 			
 		} catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
 			
 			e.printStackTrace();
 		} catch (InvalidKeyException e) {
-			// TODO Auto-generated catch block
+			
 			e.printStackTrace();
 		} catch (IllegalBlockSizeException e) {
-			// TODO Auto-generated catch block
+			
 			e.printStackTrace();
 		} catch (BadPaddingException e) {
-			// TODO Auto-generated catch block
+			
 			e.printStackTrace();
 		}
 		
-		 System.out.println("try to split");
 		 //split command !ok and all the others
 		 String[] message2ndparameter = new String(finalByteMessageDecrypted).split(" ");
-		 
-		 log.info("how many message2ndparameter " + message2ndparameter.length);
-		 log.info("1 mess "+message2ndparameter[0] + " 2 challange client "+ message2ndparameter[1]  + " 3 contr "+
-		                   message2ndparameter[2] + " 4 aes " + message2ndparameter[3] + " 5 iv "+ message2ndparameter[4] );
-		 
-		 //client challenge string to base = equals
-		 log.info("try to check client challenge");
+		 	 
 		
 		 if(Arrays.equals(message2ndparameter[1].getBytes(),base64Message)){
-				log.info("Client Challenge received and Accepted - Securtiy Channel establisehd");
+				System.out.println("Client Challenge Accepted");
 			}
-			
 			 
-		 
 		 //controller challenge 
 		 String controllerChallange = message2ndparameter[2];	
 		 
-
 		 //IV Parameter
-		 log.info("get iv to bytes");
 		 this.ivParameter = Base64.decode(message2ndparameter[4].getBytes());
 		 
 		 //AES Key
-		 log.info("keyAes byte");
 		 byte[] keyAESBytes = message2ndparameter[3].getBytes();
-		 log.info("make secret key");
 		 this.aesSecretKEy = new SecretKeySpec(Base64.decode(keyAESBytes), 0, Base64.decode(keyAESBytes).length, "AES");
 		 
-		 
 		 //send 3rd message
-		
 		byte[] final3rdMessageEncrypted = null;
 		
-		log.info("try to make 3rd message enxy");
 		try {
 			this.cipherAESencode = Cipher.getInstance("AES/CTR/NoPadding");
 			this.cipherAESdecode = cipherAESencode;
 		} catch (NoSuchAlgorithmException | NoSuchPaddingException e1) {
-			//
+			
 			e1.printStackTrace();
 		}
-		log.info("after get instance");
+	
 		 // MODE is the encryption/decryption mode
 		 // KEY is either a private, public or secret key
 		 // IV is an init vector, needed for AES
-		
-		log.info("controller challlang before encry base64"+ controllerChallange.getBytes() + "  "+  controllerChallange);
 		 IvParameterSpec ivspec = new IvParameterSpec(this.ivParameter);
-		 log.info( "try to use iv");
+		
 		 try {
 			 
 			 cipherAESencode.init(Cipher.ENCRYPT_MODE,this.aesSecretKEy,ivspec);
 			 cipherAESdecode.init(Cipher.DECRYPT_MODE,this.aesSecretKEy,ivspec);
-			log.info( "after init aes cipher");
-			final3rdMessageEncrypted = cipherAESencode.doFinal(controllerChallange.getBytes());
-			log.info( "after init aes doFinal");	
-			
-			
+			 final3rdMessageEncrypted = cipherAESencode.doFinal(controllerChallange.getBytes());
+					
 		} catch (InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException e) {
-			// TODO Auto-generated catch block
+			
 			e.printStackTrace();
 		}
-			log.info("before base54");
+		
 			
 		 byte[] final3rdMessageEncryptedBase64 = Base64.encode(final3rdMessageEncrypted);
-			log.info( "before send 3");
-			
-		//send to Controller as a String 1st
-			log.info("sending message3 bytee" + final3rdMessageEncrypted);
 				
-			log.info("sending message3 base" + final3rdMessageEncryptedBase64);
+		//send to Controller as a String 1st
 		writer.println(new String(final3rdMessageEncryptedBase64,"UTF-8")); 
 		
-		//return reader.readLine();
-		log.info("return auth");
-		return "Authentication Successfull";	
+		return "Authentication Successful";	
 		
 	}
 
 	@Override
 	public String authenticate(String username) throws IOException {
-		// TODO Auto-generated method stub
+		//TODO change from auth and Interface
 		return null;
 	}
 

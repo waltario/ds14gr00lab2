@@ -88,7 +88,7 @@ public class ClientListener implements Runnable, Closeable {
 				if(!toSend.equals("Client Accepted"))
 					writer.println(toSend);
 				else{
-					log.info(toSend);
+					System.out.println(toSend + this.uname);
 				}
 				
 			} catch (IOException e) {
@@ -133,12 +133,9 @@ public class ClientListener implements Runnable, Closeable {
 		//user not logged in -> check only !authenticate and !login
 		//use RSA 
 		
-		log.info("INFO WE are not Logged In go on!!!");
-
-	
 	
 		byte[] inputBytesBase64 = input.getBytes();
-		log.info("base -< enc ");
+		
 		
 		//base64 -> encrypted message
 		byte[] byteReceivedInputEncrypted = Base64.decode(inputBytesBase64);
@@ -151,11 +148,11 @@ public class ClientListener implements Runnable, Closeable {
 		Cipher cipher = null;
 		byte[] finalByteMessageDecrypted = null;
 				
-		log.info("try clipher");
+		
 		try {
 			cipher = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
 			cipher.init(Cipher.DECRYPT_MODE, privateKeyController);
-			log.info("before do");
+			
 			finalByteMessageDecrypted = cipher.doFinal(byteReceivedInputEncrypted);
 								
 		} catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
@@ -172,199 +169,145 @@ public class ClientListener implements Runnable, Closeable {
 			e.printStackTrace();
 		}
 				
-		log.info("before split");
+		
 				 //split command
 		String[] command = null;
 		
 		try {
-				log.info("finalByteMessageDecrypted" + finalByteMessageDecrypted);
-				log.info("finalByteMessageDecrypted string" + new String(finalByteMessageDecrypted));
-				log.info("finalByteMessageDecrypted string" + new String(finalByteMessageDecrypted,"UTF-8"));
-					
-				
 				//split incoming command 
 				command = new String(finalByteMessageDecrypted,"UTF-8").split(" ");
-				log.info("1 "+ command[0] +  " 2 "+ command[1] + " 3 " +command[2] );
 					
 		} catch (UnsupportedEncodingException e) {
 				e.printStackTrace();
 		}
-		 log.info("after split");
 		
-		/*
-		if (command[0].equals("!exit"))
-			return "Exitting client!";
-		 log.info("after split3");
-		if (!command[0].equals("!login")
-				&& (uname == null || !collector.isLoggedIn(uname)))
-			return "You have to login first!";
-		*/
-		log.info("before switch");
+		
 		switch (command[0]) {
 
 		case "!login":
 			return loginCommand(command[1], command[2]);
+			
 		case "!credits":
-			log.info("!credits command received");
 			return "You have " + collector.getCredits(uname) + " credits left.";
+			
 		case "!buy":
 			return buyCommand(command[1]);
+			
 		case "!list":
-			log.info("!list command received");
 			return encodeAES(collector.listOperators());
 			
 		case "!compute":
 			return computeCommand(command);
+			
 		case "!logout":
 			collector.logout(uname);
 			this.uname = null;
-			String ret = encodeAES("Succesfully logged out!");
-			log.info("## check sended Succesfully logged out! ##  " + ret);
-			return ret;
+			return encodeAES("Succesfully logged out!");
 			
 		case "!authenticate":	
-			log.info("auth erkannt " + command[0] + " " + command[1] + " " + command[2] );
 			return authCommand(command[1],command[2].getBytes()); 
 		}
 
-		log.info("return?");
 		return "CLIENT SAID: " + input;
 	}	
 	else{
 		//user  logged in -> check everything apart !authenticate
 		//use AES
-		
-		log.info("INFO WE are already Logged In go on!!!");
-	
+			
 		String decodedRequest = decodeAES(input);
-		log.info("decodedRequest = " + decodedRequest);
-		
 		String[] command = null;		
 				
 		command = decodedRequest.split(" ");
-		log.info("Command: Command[0] = " + command[0]);
-		
-		log.info("check switch");
+
 		switch (command[0]) {
 
 		case "!login":
 			return loginCommand(command[1], command[2]);
 			
 		case "!credits":
-			log.info("!credits received");
 			return encodeAES("You have " + collector.getCredits(uname) + " credits left.");
 			
 		case "!buy":
-			log.info("!buy received amount: " + command[1]);
-			log.info("!buy received amount: " + command);
 			return encodeAES(buyCommand(command[1]));
 			
 		case "!list":
-			log.info("!list received" + command);
-			
 			return encodeAES(collector.listOperators());
 			
 		case "!compute":
 			return encodeAES(computeCommand(command));
+			
 		case "!logout":
-			log.info("!logout received");
 			collector.logout(uname);
 			this.uname = null;
-			String test = encodeAES("Succesfully logged out");
-			log.info("Test String"+ this.decodeAES(test));
-			return test;
+			return encodeAES("Succesfully logged out");
 			
 		case "!authenticate":	
-			log.info("auth erkannt " + command[0] + " " + command[1] + " " + command[2] );
 			return authCommand(command[1],command[2].getBytes()); 
 		}
 		
-		log.info("return?");
-		return "CLIENT SAID: " + input;
-		
+		return "CLIENT SAID: " + input;	
 	}
 	
-	
 }	
+	
 	private String encodeAES(String command){
-		log.info("start encoding with AES");
-
+		
 		 byte[] retMessageEncyrypted = null;
 		 try {
 			 
-			 log.info("doFinal - encrypt String: " + command);
 			 retMessageEncyrypted = cipherAESencode.doFinal(command.getBytes());
-			 log.info( "after encoding aes doFinal" + retMessageEncyrypted);	
-				
+
 				
 			} catch (IllegalBlockSizeException | BadPaddingException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 				
-			 log.info("base encode encoded message");	
-			 byte[] final3rdMessageEncryptedBase64 = Base64.encode(retMessageEncyrypted);
-			 log.info("base encoded" + final3rdMessageEncryptedBase64);
-				
-			log.info("create string");
+			byte[] final3rdMessageEncryptedBase64 = Base64.encode(retMessageEncyrypted);
+		
 			String retString = null;
 			try {
 				retString = new String(final3rdMessageEncryptedBase64,"UTF-8");
 			} catch (UnsupportedEncodingException e) {	
 				e.printStackTrace();
 			}
-			log.info("created string: " + retString);
-			
-			return retString;
-			
+
+			return retString;			
 	}
 	
 	
 	private String decodeAES(String command){
-		log.info("start deoding with AES");
 
 		 byte[] retMessageEncyrypted = null;
 		 try {
-			 log.info("doFinal - encrypt String: " + command);
-			 retMessageEncyrypted = cipherAESdecode.doFinal(Base64.decode(command.getBytes()));
-			  log.info( "after decoding aes doFinal " + retMessageEncyrypted);	
+			  retMessageEncyrypted = cipherAESdecode.doFinal(Base64.decode(command.getBytes()));
+					
+		} catch (IllegalBlockSizeException | BadPaddingException e) {
 				
-				
-			} catch (IllegalBlockSizeException | BadPaddingException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
-			}
+		}
 			
-				
-			// byte[] final3rdMessageEncryptedBase64 = Base64.encode(retMessageEncyrypted);
-				//log.info( "before send 3");
-				
 
-		    log.info("create string");
-			String retString = null;
-			try {
-				retString = new String(retMessageEncyrypted,"UTF-8");
-			} catch (UnsupportedEncodingException e) {
-				
-				e.printStackTrace();
-			}
-			log.info("created string: " + retString);
-			
-			return retString;
+		String retString = null;
+		try {
+			retString = new String(retMessageEncyrypted,"UTF-8");
+		} catch (UnsupportedEncodingException e) {		
+			e.printStackTrace();
+		}
+	
+		return retString;
 	}
 	
 	
 	//receive name to auth and clientchallange base64 encrypted
 	private String authCommand(String clientName, byte[] clientChallenge){
-		log.info("enter auth Command");
 
 	boolean loggedIn = collector.isLoggedIn(clientName);
-	log.info("got login boolean" + loggedIn);	
 	
+	/*
 	if (!loggedIn) {
 		log.info("WE ARE NOT LOGG IN GO ON !!!!" + loggedIn);
-	}
-		log.info("string clientname: " + clientName + " clientchallange " + clientChallenge);
+	}*/
+	
 		//read public key of client with name 	
 		try {
 			this.publicKeyClient = Keys.readPublicPEM(new File(collector.getPublicKeyPathClient()+"/"+clientName+".pub.pem"));
@@ -378,8 +321,7 @@ public class ClientListener implements Runnable, Closeable {
 		byte[] whiteSpaceByte = whiteSpace.getBytes();
 		
 		//concat return Message and Client Challange	
-		//authReturnMessage = authReturnMessage + clientChallenge + " ";
-		
+		//authReturnMessage = authReturnMessage + clientChallenge + " ";	
 		byte[] authReturnMessageBytes = authReturnMessage.getBytes();
 		
 		
@@ -468,10 +410,6 @@ public class ClientListener implements Runnable, Closeable {
 		System.arraycopy(initVectorBase64, 0, finalByteMessage5, finalByteMessage4.length, initVectorBase64.length);
 		
 		
-		log.info("before encry: "+  finalByteMessage5);
-		log.info("before encry to string: "+  new String(finalByteMessage5));
-		
-		
 		//byte[] finalByteMessage5  = authReturnMessage.getBytes();
 		// prepare cipher RSA
 		Cipher cipher = null;
@@ -482,20 +420,20 @@ public class ClientListener implements Runnable, Closeable {
 			cipher.init(Cipher.ENCRYPT_MODE,this.publicKeyClient);
 			finalByteMessageEncrypted = cipher.doFinal(finalByteMessage5);
 		} catch (NoSuchAlgorithmException e) {
-			
 			e.printStackTrace();
+			
 		} catch (NoSuchPaddingException e) {
+			e.printStackTrace();
 			
-			e.printStackTrace();
 		} catch (InvalidKeyException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			
 		} catch (IllegalBlockSizeException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			
 		} catch (BadPaddingException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			
 		}
 		
 		// encode final encrypted message into Base64 format
@@ -508,16 +446,14 @@ public class ClientListener implements Runnable, Closeable {
 			
 			e.printStackTrace();
 		}
-		System.out.println("message 2 sended");
+	
 		
 		try {
 			writer.println( new String(finalByteMessageEncryptedBase64,"UTF-8"));
 		} catch (UnsupportedEncodingException e2) {
-			// TODO Auto-generated catch block
 			e2.printStackTrace();
 		}
 		
-		System.out.println("wait for 3rd message");
 		//wait for last confirmation message 3
 		String input3rdMessage =null;
 		try {
@@ -551,26 +487,18 @@ public class ClientListener implements Runnable, Closeable {
 			final3rdMessageDecrypted = cipherAESdecode.doFinal(Base64.decode(input3rdMessageBytes));
 			
 		} catch (InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
-		 log.info("last challange base: " + controllerChallangebase64);
-		 log.info("last test empf base : " + final3rdMessageDecrypted);
-		 
-		 log.info("last challange base dec: " + Base64.decode(controllerChallangebase64));
-		 log.info("last test empf base dec: " + Base64.decode(final3rdMessageDecrypted));
 		 
 		if(Arrays.equals(controllerChallangebase64,final3rdMessageDecrypted)){
-			System.out.println("Client Accepted - Securtiy Channel establisehd");
-			log.info("yippi 1");
-			//ste user online after sec channel
+			System.out.println("Controller Challenge Accepted");
+			
 			collector.setOnline(clientName);
 			this.uname = clientName;
 		}
 			
 		return "Client Accepted";
-
 } 
 
 	
