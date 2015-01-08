@@ -508,9 +508,175 @@ public class Client implements IClientCli, Runnable {
 	}
 
 	@Override
+	@Command
 	public String authenticate(String username) throws IOException {
-		//TODO change from auth and Interface
-		return null;
+
+		//if client is already authenticated return
+		if(isAuthenticated())
+			return this.alreadyAuthenticated;
+		
+
+		PrivateKey privateKeyUser = null;
+		PublicKey publicKeyController = null;
+		byte[] finalByteMessageEncryptedBase64 = null;
+		
+		byte[] base64Message =null;
+		
+		File file = new File(config.getString("keys.dir")+"/"+username+".pem");
+		
+		//check if file exists - private user key - only proceed if exists
+		if(file.exists()){
+			
+			privateKeyUser = Keys.readPrivatePEM(new File(config.getString("keys.dir")+"/"+username+".pem"));
+			publicKeyController = Keys.readPublicPEM(new File(config.getString("controller.key")));
+	
+			
+			// generates a 32 byte secure random number
+			SecureRandom secureRandom = new SecureRandom();
+			byte[] number = new byte[32];
+			secureRandom.nextBytes(number);
+			
+			// encode client challenge into Base64 format
+			base64Message = Base64.encode(number);
+		
+			//strings or bytes
+			String authandUsername = "!authenticate " + username + " ";
+					
+			byte[] authandUsernameBytes = authandUsername.getBytes();
+			
+			//concat 2 byte arrays
+			byte[] finalByteMessage = new byte[authandUsernameBytes.length + base64Message.length];
+			System.arraycopy(authandUsernameBytes, 0, finalByteMessage, 0, authandUsernameBytes.length);
+			System.arraycopy(base64Message, 0, finalByteMessage, authandUsernameBytes.length, base64Message.length);
+			
+			
+			// prepare cipher RSA
+			Cipher cipher = null;
+			byte[] finalByteMessageEncrypted = null;
+			
+			try {
+				cipher = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
+				cipher.init(Cipher.ENCRYPT_MODE,publicKeyController);
+				finalByteMessageEncrypted = cipher.doFinal(finalByteMessage);
+			} catch (NoSuchAlgorithmException e) {
+				
+				e.printStackTrace();
+			} catch (NoSuchPaddingException e) {
+				
+				e.printStackTrace();
+			} catch (InvalidKeyException e) {
+				
+				e.printStackTrace();
+			} catch (IllegalBlockSizeException e) {
+				
+				e.printStackTrace();
+			} catch (BadPaddingException e) {
+				
+				e.printStackTrace();
+			}
+			
+			// encode final encrypted message into Base64 format
+			finalByteMessageEncryptedBase64 = Base64.encode(finalByteMessageEncrypted);
+		
+		}
+		else{
+			return "Error | No Key Available for User " + username;
+		}
+		
+		
+		//send to Controller as a String 1st
+		writer.println(new String(finalByteMessageEncryptedBase64,"UTF-8"));
+		
+
+		//wait for answer controller 2nd
+		String  message2returned = reader.readLine();
+		
+		//System.out.println("message 2 received");
+		
+		//2nd message received -> read parameters and send 3rd message back
+		byte[] message2returnedBytesBase64 = message2returned.getBytes();
+		
+		//base64 -> encrypted message
+		byte[] byteReceivedInputEncrypted = Base64.decode(message2returnedBytesBase64);
+
+		//System.out.println("returned message "+ byteReceivedInputEncrypted);
+		
+		// prepare cipher RSA
+		Cipher cipher2 = null;
+		byte[] finalByteMessageDecrypted = null;
+		
+		//encrypt the 2nd message
+		 try {
+			cipher2 = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
+			cipher2.init(Cipher.DECRYPT_MODE, privateKeyUser);
+			finalByteMessageDecrypted = cipher2.doFinal(byteReceivedInputEncrypted);
+			
+		} catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
+			
+			e.printStackTrace();
+		} catch (InvalidKeyException e) {
+			
+			e.printStackTrace();
+		} catch (IllegalBlockSizeException e) {
+			
+			e.printStackTrace();
+		} catch (BadPaddingException e) {
+			
+			e.printStackTrace();
+		}
+		
+		 //split command !ok and all the others
+		 String[] message2ndparameter = new String(finalByteMessageDecrypted).split(" ");
+		 	 
+		
+		 if(Arrays.equals(message2ndparameter[1].getBytes(),base64Message)){
+				System.out.println("Client Challenge Accepted");
+			}
+			 
+		 //controller challenge 
+		 String controllerChallange = message2ndparameter[2];	
+		 
+		 //IV Parameter
+		 this.ivParameter = Base64.decode(message2ndparameter[4].getBytes());
+		 
+		 //AES Key
+		 byte[] keyAESBytes = message2ndparameter[3].getBytes();
+		 this.aesSecretKEy = new SecretKeySpec(Base64.decode(keyAESBytes), 0, Base64.decode(keyAESBytes).length, "AES");
+		 
+		 //send 3rd message
+		byte[] final3rdMessageEncrypted = null;
+		
+		try {
+			this.cipherAESencode = Cipher.getInstance("AES/CTR/NoPadding");
+			this.cipherAESdecode = cipherAESencode;
+		} catch (NoSuchAlgorithmException | NoSuchPaddingException e1) {
+			
+			e1.printStackTrace();
+		}
+	
+		 // MODE is the encryption/decryption mode
+		 // KEY is either a private, public or secret key
+		 // IV is an init vector, needed for AES
+		 IvParameterSpec ivspec = new IvParameterSpec(this.ivParameter);
+		
+		 try {
+			 
+			 cipherAESencode.init(Cipher.ENCRYPT_MODE,this.aesSecretKEy,ivspec);
+			 cipherAESdecode.init(Cipher.DECRYPT_MODE,this.aesSecretKEy,ivspec);
+			 final3rdMessageEncrypted = cipherAESencode.doFinal(controllerChallange.getBytes());
+					
+		} catch (InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException e) {
+			
+			e.printStackTrace();
+		}
+		
+			
+		 byte[] final3rdMessageEncryptedBase64 = Base64.encode(final3rdMessageEncrypted);
+				
+		//send to Controller as a String 1st
+		writer.println(new String(final3rdMessageEncryptedBase64,"UTF-8")); 
+		
+		return "Authentication Successful";
 	}
 
 }
