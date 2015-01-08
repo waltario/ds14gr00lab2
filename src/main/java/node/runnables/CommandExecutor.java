@@ -1,11 +1,8 @@
 package node.runnables;
 
-import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.file.Files;
@@ -19,19 +16,20 @@ import node.Node;
 
 public class CommandExecutor implements Runnable, Closeable {
 
-	private BufferedReader reader = null;
+	private String input = null;
 	private PrintStream writer = null;
 	private String componentName = null;
 	private ThreadLocal<DateFormat> df = null;
 	private String dir = null;
-	
+
 	private int minRes;
 	private Node node;
 
-	CommandExecutor(InputStream is, OutputStream os, String componentName,
-			ThreadLocal<DateFormat> df, String dir, int minRes, Node node) throws IOException {
+	CommandExecutor(String input, OutputStream os, String componentName,
+			ThreadLocal<DateFormat> df, String dir, int minRes, Node node)
+			throws IOException {
 
-		this.reader = new BufferedReader(new InputStreamReader(is));
+		this.input = input;
 		this.writer = new PrintStream(os);
 		this.componentName = componentName;
 		this.df = df;
@@ -43,23 +41,14 @@ public class CommandExecutor implements Runnable, Closeable {
 	@Override
 	public void run() {
 
-		try {
-
-			new File("./" + dir).mkdirs();
-			String input = null;
-
-			while ((input = reader.readLine()) != null) {
-
-				writer.println(compute(input));
-			}
-
-		} catch (IOException e) {
-		}
+		writer.println(compute(input));
 
 		close();
 	}
 
 	private String compute(String expression) {
+
+		new File("./" + dir).mkdirs();
 
 		String[] parts = expression.split(" ");
 
@@ -103,23 +92,26 @@ public class CommandExecutor implements Runnable, Closeable {
 				return "Computationrequest has wrong format!";
 			}
 		}
-		
-		// Receive !share request from Initiator, change newRes from Node in preparation for the change
-		else if("!share".equals(parts[0])) {
-			int newRes = Integer.parseInt(parts[1]); //System.out.println("!share!");
+
+		// Receive !share request from Initiator, change newRes from Node in
+		// preparation for the change
+		else if ("!share".equals(parts[0])) {
+			int newRes = Integer.parseInt(parts[1]); // System.out.println("!share!");
 			node.setNewRes(newRes);
-			if(newRes < minRes) {
-				//System.out.println("!share nok");
+			if (newRes < minRes) {
+				// System.out.println("!share nok");
 				return "!nok";
 			} else {
-				//System.out.println("!share ok");
+				// System.out.println("!share ok");
 				return "!ok";
 			}
 		}
-		
-		// Receive !commit request from Initiator, finalize the change from the last !share request
-		else if("!commit".equals(parts[0])) {
-			//System.out.println("commandexecutor !commit, nres " + node.getNewRes());
+
+		// Receive !commit request from Initiator, finalize the change from the
+		// last !share request
+		else if ("!commit".equals(parts[0])) {
+			// System.out.println("commandexecutor !commit, nres " +
+			// node.getNewRes());
 			node.setRes(node.getNewRes());
 		}
 
@@ -149,13 +141,6 @@ public class CommandExecutor implements Runnable, Closeable {
 
 		if (writer != null)
 			writer.close();
-
-		if (reader != null)
-			try {
-				reader.close();
-			} catch (IOException e) {
-
-			}
 	}
 
 }

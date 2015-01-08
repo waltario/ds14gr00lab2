@@ -3,27 +3,42 @@ package controller;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
 import java.io.PrintStream;
-import java.security.PrivateKey;
+import java.net.Socket;
+import java.rmi.AlreadyBoundException;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
+import java.security.Key;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import model.ComputationRequestInfo;
 import util.Config;
 import util.Keys;
 import util.SecurityUtils;
+import admin.INotificationCallback;
 import cli.Command;
 import cli.Shell;
+import controller.helpers.NodeHelper;
 import controller.helpers.StatsCollector;
 import controller.helpers.User;
 import controller.runnables.TCPListener;
 import controller.runnables.UDPListener;
 
-public class CloudController implements ICloudControllerCli, Runnable {
+public class CloudController implements ICloudControllerCli, IAdminConsole,
+		Runnable {
 
 	private String componentName = null;
 	private Config config = null;
@@ -34,7 +49,9 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	private Shell shell = null;
 	private TCPListener accepter = null;
 	private UDPListener receiver = null;
-	
+	private Registry registry = null;
+	private IAdminConsole adminConsole = null;
+
 	/**
 	 * @param componentNamenThreads
 	 *            the name of the component - represented in the prompt
@@ -54,24 +71,33 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		this.userResponseStream = userResponseStream;
 		this.executor = Executors.newFixedThreadPool(3);
 		this.collector = StatsCollector.getInstance();
-		
+
 		SecurityUtils.registerBouncyCastle();
 
 		initConfig();
 		initRunnables();
-		
-		//get private key for controller and set
+
+		// get private key for controller and set
 		try {
-			collector.setPrivateKey(Keys.readPrivatePEM(new File(config.getString("key"))));
+			collector.setPrivateKey(Keys.readPrivatePEM(new File(config
+					.getString("key"))));
 			collector.setPublicKeyPathClient(config.getString("keys.dir"));
-			
+
 		} catch (IOException e) {
-			
+
 		}
 	}
 
 	@Override
 	public void run() {
+
+		try {
+
+			initRegistry();
+		} catch (RuntimeException e) {
+
+			System.err.println(e.getMessage());
+		}
 
 		executor.execute(shell);
 		executor.execute(accepter);
@@ -154,6 +180,23 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		receiver.setRes(config.getInt("controller.rmax"));
 	}
 
+	private void initRegistry() throws RuntimeException {
+
+		try {
+			registry = LocateRegistry.createRegistry(config
+					.getInt("controller.rmi.port"));
+			adminConsole = (IAdminConsole) UnicastRemoteObject.exportObject(
+					this, 0);
+			registry.bind(config.getString("binding.name"), adminConsole);
+		} catch (RemoteException e) {
+
+			throw new RuntimeException("Error while initializing Registry!");
+		} catch (AlreadyBoundException e) {
+
+			throw new RuntimeException("Error while binding remote object!");
+		}
+	}
+
 	private String formOutput(ConcurrentHashMap<?, ?> map) {
 
 		StringBuilder sb = new StringBuilder();
@@ -167,6 +210,111 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		}
 
 		return sb.toString();
+	}
+
+	@Override
+	public boolean subscribe(String username, int credits,
+			INotificationCallback callback) throws RemoteException {
+		// TODO Auto-generated method stub
+		return true;
+	}
+
+	@Override
+	public List<ComputationRequestInfo> getLogs() throws RemoteException {
+
+		List<NodeHelper> nodesList = collector.getOnlineNodes();
+
+		for (NodeHelper node : nodesList) {
+
+			try {
+
+				Socket socket = new Socket(node.getAddress(), node.getPort());
+
+				PrintStream writer = new PrintStream(socket.getOutputStream(),
+						true);
+				writer.println("!logs");
+				writer.flush();
+				ObjectInputStream ois = new ObjectInputStream(
+						socket.getInputStream());
+
+				@SuppressWarnings("unchecked")
+				List<ComputationRequestInfo> list = (List<ComputationRequestInfo>) ois
+						.readObject();
+
+				if (writer != null)
+					writer.close();
+
+				if (ois != null)
+					ois.close();
+
+				if (socket != null)
+					socket.close();
+
+				return list;
+
+			} catch (IOException e) {
+
+			} catch (ClassNotFoundException e) {
+
+				System.err.println("There is a failure!");
+			}
+		}
+
+		return null;
+	}
+
+	@Override
+	public LinkedHashMap<Character, Long> statistics() throws RemoteException {
+
+		return sortHashMapByValues(collector.getStatisticsMap());
+	}
+
+	@Override
+	public Key getControllerPublicKey() throws RemoteException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void setUserPublicKey(String username, byte[] key)
+			throws RemoteException {
+		// TODO Auto-generated method stub
+
+	}
+
+	private LinkedHashMap<Character, Long> sortHashMapByValues(
+			HashMap<Character, Long> map) {
+
+		List<Character> mapKeys = new ArrayList<Character>(map.keySet());
+		List<Long> mapValues = new ArrayList<Long>(map.values());
+		Collections.sort(mapValues, Collections.reverseOrder());
+		Collections.sort(mapKeys, Collections.reverseOrder());
+
+		LinkedHashMap<Character, Long> sortedMap = new LinkedHashMap<Character, Long>();
+
+		Iterator<Long> valueIt = mapValues.iterator();
+
+		while (valueIt.hasNext()) {
+
+			Object val = valueIt.next();
+			Iterator<Character> keyIt = mapKeys.iterator();
+
+			while (keyIt.hasNext()) {
+
+				Object key = keyIt.next();
+				String comp1 = map.get(key).toString();
+				String comp2 = val.toString();
+
+				if (comp1.equals(comp2)) {
+
+					map.remove(key);
+					mapKeys.remove(key);
+					sortedMap.put((Character) key, (Long) val);
+					break;
+				}
+			}
+		}
+		return sortedMap;
 	}
 
 	/**
