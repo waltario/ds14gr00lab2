@@ -3,6 +3,7 @@ package controller.helpers;
 import java.security.PrivateKey;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -10,12 +11,13 @@ public class StatsCollector {
 
 	// resources
 	private int maxRes;
-	
+
 	private static StatsCollector instance = null;
 	private ConcurrentHashMap<Integer, NodeHelper> nodeMap = null;
 	private ConcurrentHashMap<Character, List<Integer>> operatorMap = null;
 	private ConcurrentHashMap<String, User> userMap = null;
-	
+	private ConcurrentHashMap<Character, Long> statisticsMap = null;
+
 	private PrivateKey privateKeyController = null;
 	private String publicKeyPathClient = null;
 
@@ -24,6 +26,7 @@ public class StatsCollector {
 		this.nodeMap = new ConcurrentHashMap<Integer, NodeHelper>();
 		this.operatorMap = new ConcurrentHashMap<Character, List<Integer>>();
 		this.userMap = new ConcurrentHashMap<String, User>();
+		this.statisticsMap = new ConcurrentHashMap<Character, Long>();
 	}
 
 	public static StatsCollector getInstance() {
@@ -59,6 +62,9 @@ public class StatsCollector {
 				operatorMap.put(ops[i], list);
 				addToOperatorMap(ops[i], nodeHelper.getPort());
 			}
+
+			if (!statisticsMap.containsKey(ops[i]))
+				addToStatisticsMap(ops[i]);
 		}
 	}
 
@@ -81,6 +87,38 @@ public class StatsCollector {
 		}
 	}
 
+	private void addToStatisticsMap(Character c) {
+
+		statisticsMap.put(c, (long) 0);
+	}
+
+	public void increaseStatistics(Character c) {
+
+		if (statisticsMap.containsKey(c)) {
+
+			Long newStat = statisticsMap.get(c) + 1;
+			statisticsMap.put(c, newStat);
+		}
+	}
+
+	public HashMap<Character, Long> getStatisticsMap() {
+
+		return new HashMap<Character, Long>(statisticsMap);
+	}
+
+	public List<NodeHelper> getOnlineNodes() {
+
+		List<NodeHelper> list = new ArrayList<NodeHelper>();
+
+		for (Integer port : nodeMap.keySet()) {
+
+			if (nodeMap.get(port).isOnline())
+				list.add(nodeMap.get(port));
+		}
+
+		return list;
+	}
+
 	public ConcurrentHashMap<Integer, NodeHelper> getNodeMap() {
 
 		return nodeMap;
@@ -92,7 +130,7 @@ public class StatsCollector {
 	}
 
 	public String listOperators() {
-				
+
 		String ret = "";
 
 		for (Character c : operatorMap.keySet()) {
@@ -156,7 +194,7 @@ public class StatsCollector {
 	}
 
 	public boolean isLoggedIn(String uname) {
-		
+
 		User user = userMap.get(uname);
 
 		if (user != null)
@@ -188,12 +226,12 @@ public class StatsCollector {
 			User user = userMap.get(uname);
 			user.setOnline(true);
 			return true;
-			
+
 		}
 
 		return false;
 	}
-	
+
 	public void logout(String uname) {
 
 		userMap.get(uname).setOnline(false);
@@ -216,16 +254,16 @@ public class StatsCollector {
 
 		return false;
 	}
-	
+
 	// ///////////////////////////////////////////////////
 	// ///////////////////// CONTROLLER KEYS ////////////////////////
 	// ///////////////////////////////////////////////////
 
-	public void setPrivateKey(PrivateKey pk){
+	public void setPrivateKey(PrivateKey pk) {
 		this.privateKeyController = pk;
 	}
-	
-	public PrivateKey getPrivateKey(){
+
+	public PrivateKey getPrivateKey() {
 		return privateKeyController;
 	}
 
@@ -236,5 +274,5 @@ public class StatsCollector {
 	public void setPublicKeyPathClient(String publicKeyPathClient) {
 		this.publicKeyPathClient = publicKeyPathClient;
 	}
-	
+
 }

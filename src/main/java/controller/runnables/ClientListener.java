@@ -93,7 +93,6 @@ public class ClientListener implements Runnable, Closeable {
 				
 			} catch (IOException e) {
 
-				System.err.println("Error while reading from InputStream!");
 				exitCount++;
 				if (exitCount == 3)
 					stopped = true;
