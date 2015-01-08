@@ -269,6 +269,8 @@ public class Client implements IClientCli, Runnable {
 		
 		//writer.println("!exit");
 		///String ret = reader.readLine();
+		if(isAuthenticated())
+			this.logout();
 		
 		close();
 	

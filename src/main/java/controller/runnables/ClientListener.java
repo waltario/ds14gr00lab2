@@ -88,7 +88,7 @@ public class ClientListener implements Runnable, Closeable {
 				if(!toSend.equals("Client Accepted"))
 					writer.println(toSend);
 				else{
-					System.out.println(toSend + this.uname);
+					System.out.println(toSend + " " + this.uname);
 				}
 				
 			} catch (IOException e) {
